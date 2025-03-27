@@ -1,0 +1,170 @@
+import tkinter as tk
+from tkinter import ttk
+import random
+import networkx as nx
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+# Definimos los estados de un proceso
+estados = ["Nuevo", "Listo", "Ejecución", "Espera", "Terminado"]
+colores_procesos = ["red", "green", "orange", "blue", "purple"]
+
+class Proceso:
+    def __init__(self, pid, rafaga, memoria, color):
+        self.pid = pid
+        self.rafaga = rafaga
+        self.memoria = memoria
+        self.estado = "Nuevo"
+        self.tiempo_restante = rafaga
+        self.color = color
+
+    def cambiar_estado(self, nuevo_estado):
+        self.estado = nuevo_estado
+
+class SimuladorProcesos:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Simulador de Procesos")
+        
+        self.label = tk.Label(root, text="Simulación de Procesos", font=("Arial", 14))
+        self.label.pack()
+        
+        self.tree = ttk.Treeview(root, columns=("PID", "Estado", "Ráfaga", "Memoria"), show='headings')
+        self.tree.heading("PID", text="PID")
+        self.tree.heading("Estado", text="Estado")
+        self.tree.heading("Ráfaga", text="Ráfaga")
+        self.tree.heading("Memoria", text="Memoria")
+        self.tree.pack()
+        
+        self.btn_iniciar = tk.Button(root, text="Iniciar Simulación", command=self.iniciar_simulacion)
+        self.btn_iniciar.pack()
+        self.btn_agregar = tk.Button(root, text="Agregar Proceso", command=self.agregar_proceso)
+        self.btn_agregar.pack()
+        self.btn_reiniciar = tk.Button(root, text="Reiniciar Simulación", command=self.reiniciar_simulacion)
+        self.btn_reiniciar.pack()
+        self.btn_interrumpir = tk.Button(root, text="Interrumpir Proceso", command=self.interrumpir_proceso)
+        self.btn_interrumpir.pack()
+        
+        self.procesos = []
+        self.inicializar_procesos()
+        self.actualizar_tabla()
+        
+        self.fig, self.ax = plt.subplots(figsize=(6, 5))
+        self.canvas = FigureCanvasTkAgg(self.fig, master=root)
+        self.canvas.get_tk_widget().pack()
+        self.grafo = nx.DiGraph()
+        self.configurar_diagrama()
+        self.dibujar_diagrama("Nuevo", "gray")
+        
+        self.proceso_actual = 0
+        self.ejecutando = False
+        self.interrupcion = False  # Flag para manejar interrupciones
+
+    def inicializar_procesos(self):
+        self.procesos = [Proceso(i, random.randint(5, 10), random.randint(10, 50), colores_procesos[i % len(colores_procesos)]) for i in range(3)]
+
+    def agregar_proceso(self):
+        nuevo_proceso = Proceso(len(self.procesos), random.randint(5, 10), random.randint(10, 50), random.choice(colores_procesos))
+        self.procesos.append(nuevo_proceso)
+        self.actualizar_tabla()
+    
+    def reiniciar_simulacion(self):
+        self.proceso_actual = 0
+        self.procesos = []
+        self.inicializar_procesos()
+        self.actualizar_tabla()
+        self.dibujar_diagrama("Nuevo", "gray")
+
+    def actualizar_tabla(self):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+        for proceso in self.procesos:
+            self.tree.insert("", "end", values=(proceso.pid, proceso.estado, proceso.rafaga, proceso.memoria))
+    
+    def configurar_diagrama(self):
+        self.grafo.add_edges_from([
+            ("Nuevo", "Listo"), ("Listo", "Ejecución"), ("Ejecución", "Espera"),
+            ("Ejecución", "Terminado"), ("Espera", "Listo")
+        ])
+        self.pos = {
+            "Nuevo": (0, 2), "Listo": (2, 2), "Ejecución": (4, 2),
+            "Espera": (4, 0), "Terminado": (6, 2)
+        }
+    
+    def dibujar_diagrama(self, estado_actual, color):
+        self.ax.clear()
+        colores = [color if nodo == estado_actual else "lightblue" for nodo in self.grafo.nodes()]
+        nx.draw(
+            self.grafo, self.pos, with_labels=True, node_color=colores, 
+            edge_color="black", node_size=2000, font_size=10, font_weight="bold", ax=self.ax
+        )
+        self.canvas.draw()
+    
+    def ejecutar_proceso(self):
+        if self.proceso_actual >= len(self.procesos):
+            return
+
+        proceso = self.procesos[self.proceso_actual]
+        proceso.cambiar_estado("Listo")
+        self.actualizar_tabla()
+        self.dibujar_diagrama("Listo", proceso.color)
+        
+        self.root.after(3000, self.ejecutar_estado, proceso)
+    
+    def ejecutar_estado(self, proceso):
+        if self.interrupcion:
+            self.poner_en_espera(proceso)
+            self.interrupcion = False  # Resetear la interrupción
+            return
+
+        proceso.cambiar_estado("Ejecución")
+        self.actualizar_tabla()
+        self.dibujar_diagrama("Ejecución", proceso.color)
+        
+        if self.proceso_actual + 1 < len(self.procesos):
+            self.procesos[self.proceso_actual + 1].cambiar_estado("Listo")
+            self.actualizar_tabla()
+        
+        self.root.after(1000, self.verificar_interrupcion, proceso)  # Verificar interrupción cada 1 segundo
+
+    def verificar_interrupcion(self, proceso):
+        if self.interrupcion:
+            self.poner_en_espera(proceso)
+            self.interrupcion = False
+        else:
+            self.root.after(5000, self.finalizar_proceso, proceso)
+
+    def interrumpir_proceso(self):
+        self.interrupcion = True  # Activar interrupción
+
+    def poner_en_espera(self, proceso):
+        proceso.cambiar_estado("Espera")
+        self.actualizar_tabla()
+        self.dibujar_diagrama("Espera", proceso.color)
+        
+        self.root.after(4000, self.regresar_a_listo, proceso)
+    
+    def regresar_a_listo(self, proceso):
+        proceso.cambiar_estado("Listo")
+        self.actualizar_tabla()
+        self.dibujar_diagrama("Listo", proceso.color)
+        
+        self.root.after(3000, self.ejecutar_estado, proceso)
+    
+    def finalizar_proceso(self, proceso):
+        proceso.cambiar_estado("Terminado")
+        self.actualizar_tabla()
+        self.dibujar_diagrama("Terminado", proceso.color)
+        
+        self.proceso_actual += 1
+        if self.proceso_actual < len(self.procesos):
+            self.root.after(3000, self.ejecutar_proceso)
+    
+    def iniciar_simulacion(self):
+        self.proceso_actual = 0
+        self.ejecutar_proceso()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = SimuladorProcesos(root)
+    root.mainloop()
