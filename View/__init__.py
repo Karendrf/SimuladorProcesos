@@ -1,0 +1,1 @@
+# Este archivo indica que la carpeta View es un paquete de Python.

@@ -241,29 +241,33 @@ class SimuladorProcesos:
             self.actualizar_tabla_contenedores()
     
         elif self.combobox.get() == "Paginacion":
+            # Dividir la memoria del proceso en páginas de tamaño 10
             paginas = [10] * (proceso.memoria // 10)
             if proceso.memoria % 10 != 0:
                 paginas.append(proceso.memoria % 10)
-    
+        
             for pagina in paginas:
                 contenedor_asignado = None
+                # Buscar un contenedor disponible con tamaño 10
                 for contenedor in self.contenedorDinamico:
-                    if contenedor.proceso is None and contenedor.tamaño >= pagina:
+                    if contenedor.proceso is None and contenedor.tamaño == 10:
                         contenedor.proceso = proceso
                         contenedor.tamaño_ocupado = pagina
                         contenedor.tamaño_restante = contenedor.tamaño - pagina
                         contenedor_asignado = contenedor
                         break
-    
+        
+                # Si no hay un contenedor disponible, crear uno nuevo de tamaño 10
                 if not contenedor_asignado:
-                    nuevo_contenedor = Contenedor(len(self.contenedorDinamico) + 1, pagina)
+                    nuevo_contenedor = Contenedor(len(self.contenedorDinamico) + 1, 10)
                     nuevo_contenedor.proceso = proceso
                     nuevo_contenedor.tamaño_ocupado = pagina
                     nuevo_contenedor.tamaño_restante = nuevo_contenedor.tamaño - pagina
                     self.contenedorDinamico.append(nuevo_contenedor)
-    
-            self.actualizar_tabla_contenedores()
-    
+        
+            # Actualizar las tablas
+            self.actualizar_tabla_contenedores()    
+            
         elif self.combobox.get() == "Segmentacion":
             # Verificar si el proceso ya está completamente asignado
             segmentos_asignados = sum(
