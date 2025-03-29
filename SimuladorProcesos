@@ -6,37 +6,41 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-# Definimos los estados de un proceso
-estados = ["Nuevo", "Listo", "Ejecución", "Espera", "Terminado"]
-colores_procesos = ["red", "green", "orange", "blue", "purple"]
-
+#*************************************************Clases de Objetos necesarios************************************************************************
 class Proceso:
-    def __init__(self, pid, rafaga, memoria, color):
+    def __init__(self, pid, rafaga, memoria):
         self.pid = pid
         self.rafaga = rafaga
         self.memoria = memoria
         self.estado = "Nuevo"
         self.tiempo_restante = rafaga
-        self.color = color
 
-    def cambiar_estado(self, nuevo_estado):
-        self.estado = nuevo_estado
+class Contenedor:
+    def __init__(self, numero, tamaño):
+        self.numero = numero
+        self.tamaño = tamaño
+        self.proceso = None
+        self.tamaño_ocupado = 0
+        self.tamaño_restante = tamaño
 
+#*************************************************Clase principal de la aplicación************************************************************************
 class SimuladorProcesos:
+
+#**********************************************Establecer graficos y variables de entorno************************************************************
     def __init__(self, root):
         self.root = root
         self.root.title("Simulador de Procesos")
+        self.temporizadores = []  # Lista  temporizadores activos
         
          # Etiqueta de título
         self.titulo = tk.Label(root, text="Simulación de Procesos", font=("Arial", 14))
         self.titulo.place(relx=0.1, rely=0.01, relwidth=0.8, relheight=0.05)
        
-        # Crear la tabla
+        # Crear la tabla de procesos
         self.tree = ttk.Treeview(root, columns=("PID", "Estado", "Ráfaga", "Memoria"), show='headings')
         for col in ("PID", "Estado", "Ráfaga", "Memoria"):
             self.tree.heading(col, text=col)
 
-        # Ajustar el ancho de las columnas dinámicamente
         self.tree.place(relx=0.1, rely=0.15, relwidth=0.8, relheight=0.4)
         self.root.update_idletasks() 
         table_width = self.tree.winfo_width()
@@ -61,15 +65,36 @@ class SimuladorProcesos:
         
         self.btn_interrumpir = tk.Button(root, text="Interrumpir Proceso", command=self.interrumpir_proceso)
         self.btn_interrumpir.place(relx=0.77, rely=0.15, relwidth=0.2, relheight=0.05)
-    
+
+        # Combobox para seleccionar el tipo de algoritmo
+        self.combolabel = tk.Label(root, text="Seleccionar Algoritmo de memoria:", font=("Arial", 9, "bold"))
+        self.combolabel.place(relx=0.55, rely=0.21, relwidth=0.4, relheight=0.05)
+
+        valores = ["Continuia Fija", "Continua Dinamica", "Paginacion", "Segmentacion"]
+        self.combobox = ttk.Combobox(root, values=valores, state="readonly")
+        self.combobox.set(valores[1])
+        self.combobox.place(relx=0.55, rely=0.26, relwidth=0.4, relheight=0.05)
+
         # Configurar el gráfico
         self.fig, self.ax = plt.subplots(figsize=(6, 5))
         self.canvas = FigureCanvasTkAgg(self.fig, master=root)
         self.canvas.get_tk_widget().place(relx=0.05, rely=0.33, relwidth=0.9, relheight=0.35)  # Gráfico al 80% de ancho
         
-        # Etiqueta de título
-        self.titulo = tk.Label(root, text="Simulación de Procesos", font=("Arial", 14))
-        self.titulo.place(relx=0.1, rely=0.01, relwidth=0.8, relheight=0.05)
+        # Crear la tabla de contenedores
+        self.tree_contenedores = ttk.Treeview(root, columns=("N° Contenedor", "Tamaño", "Proceso", "Tamaño Ocupado", "Tamaño Restante"), show='headings')
+        for col in ("N° Contenedor", "Tamaño", "Proceso", "Tamaño Ocupado", "Tamaño Restante"):
+            self.tree_contenedores.heading(col, text=col)
+        
+        self.tree_contenedores.place(relx=0.05, rely=0.7, relwidth=0.9, relheight=0.25)
+        self.root.update_idletasks()
+        table_width = self.tree_contenedores.winfo_width()
+        column_width = int(table_width / 5) 
+        
+        self.tree_contenedores.column("N° Contenedor", width=column_width, anchor="center")
+        self.tree_contenedores.column("Tamaño", width=column_width, anchor="center")
+        self.tree_contenedores.column("Proceso", width=column_width, anchor="center")
+        self.tree_contenedores.column("Tamaño Ocupado", width=column_width, anchor="center")
+        self.tree_contenedores.column("Tamaño Restante", width=column_width, anchor="center")
 
         # Inicializar procesos y tabla
         self.procesos = []
@@ -82,39 +107,9 @@ class SimuladorProcesos:
         self.dibujar_diagrama([])
 
         # Variables de control
+        self.contenedorDinamico = []
+        self.simulacion_en_curso = False
         self.interrupcion = False
-
-    def inicializar_procesos(self):
-        self.procesos = [Proceso(i, random.randint(5, 10), random.randint(10, 50), colores_procesos[i % len(colores_procesos)]) for i in range(3)]
-
-    def agregar_proceso(self):
-        nuevo_proceso = Proceso(len(self.procesos), random.randint(5, 10), random.randint(10, 50), random.choice(colores_procesos))
-        self.procesos.append(nuevo_proceso)
-        self.actualizar_tabla()
-    
-    def reiniciar_simulacion(self):
-        self.procesos = []
-        self.inicializar_procesos()
-        self.actualizar_tabla()
-
-    def actualizar_tabla(self):
-        # Configurar colores para cada estado
-        self.tree.tag_configure("Nuevo", foreground="dimgray")
-        self.tree.tag_configure("Listo", foreground="darkred")
-        self.tree.tag_configure("Ejecución", foreground="darkgreen")
-        self.tree.tag_configure("Espera", foreground="darkblue")    
-        self.tree.tag_configure("Terminado", foreground="darkmagenta")
-
-        # Limpiar la tabla
-        for row in self.tree.get_children():
-            self.tree.delete(row)
-
-        # Insertar los procesos en la tabla con el color correspondiente
-        for proceso in self.procesos:
-            self.tree.insert(
-                "", "end", values=(proceso.pid, proceso.estado, proceso.rafaga, proceso.memoria),
-                tags=(proceso.estado,) 
-            )
 
     def configurar_diagrama(self):
         self.grafo.add_edges_from([
@@ -125,7 +120,27 @@ class SimuladorProcesos:
             "Nuevo": (0, 2), "Listo": (2, 2), "Ejecución": (4, 2),
             "Espera": (4, 0.5), "Terminado": (6, 2)
         }
-    
+
+    def generar_array_procesos(self):
+        estados_procesos = {"Nuevo": [],"Listo": [],"Ejecución": [],"Espera": [],"Terminado": []}
+
+        # Recorrer los procesos y agruparlos por estado
+        for proceso in self.procesos:
+            estados_procesos[proceso.estado].append(f"P{proceso.pid}")
+
+        # Crear el array de strings con saltos de línea cada 3 procesos
+        array_resultado = []
+        for estado in ["Nuevo", "Listo", "Ejecución", "Espera", "Terminado"]:
+            if estados_procesos[estado]:
+                procesos_estado = estados_procesos[estado]
+                string_estado = "\n".join(
+                    [", ".join(procesos_estado[i:i+3]) for i in range(0, len(procesos_estado), 3)]
+                )
+                array_resultado.append(string_estado)
+            else:
+                array_resultado.append(" ")
+        return array_resultado
+
     def dibujar_diagrama(self, textos_secundarios):
         self.ax.clear()
         colores_nodos = {
@@ -135,8 +150,6 @@ class SimuladorProcesos:
             "Espera": "lightblue",
             "Terminado": "lightpink"
         }
-        
-        # Dibujar el grafo con colores específicos para cada nodo
         colores = [colores_nodos[nodo] for nodo in self.grafo.nodes()]
         nx.draw(
             self.grafo, self.pos, with_labels=False, node_color=colores, 
@@ -150,8 +163,6 @@ class SimuladorProcesos:
             "Espera": "Espera",
             "Terminado": "Terminado"
         }
-        
-        # Dibujar las etiquetas de los nodos con el mismo color que el nodo
         for nodo, (x, y) in pos_labels.items():
             texto = etiquetas[nodo]
             color_etiqueta = colores_nodos[nodo]
@@ -159,39 +170,100 @@ class SimuladorProcesos:
                 x, y, texto, fontsize=8, fontweight="bold", ha="center", va="center", color="black",
                 bbox=dict(facecolor=color_etiqueta, edgecolor="black", boxstyle="round,pad=0.3")  # Fondo con borde
             )
-        
-        # Dibujar una segunda etiqueta centrada en el nodo
         for i, (nodo, (x, y)) in enumerate(self.pos.items()):
             texto_secundario = textos_secundarios[i] if i < len(textos_secundarios) else ""
             self.ax.text(
                 x, y, texto_secundario, fontsize=6, fontweight="normal", ha="center", va="center",
                 color="black"
             )
-        
         self.ax.set_xlim(-1, 7) 
         self.ax.set_ylim(0, 3)   
         self.canvas.draw()
+
+    def actualizar_tabla_contenedores(self):
+        # Limpiar la tabla
+        for row in self.tree_contenedores.get_children():
+            self.tree_contenedores.delete(row)
+        # Insertar los contenedores en la tabla
+        for contenedor in self.contenedorDinamico:
+            proceso_asignado = f"P{contenedor.proceso.pid}" if contenedor.proceso else "Ninguno"
+            self.tree_contenedores.insert(
+                "", "end",
+                values=(
+                    contenedor.numero,
+                    contenedor.tamaño,
+                    proceso_asignado,
+                    contenedor.tamaño_ocupado,
+                    contenedor.tamaño_restante
+                )
+            )
+
+    def manejar_contenedores_dinamicos(self, proceso):
+        if self.combobox.get() == "Continua Dinamica":
+            # Buscar un contenedor disponible
+            for contenedor in self.contenedorDinamico:
+                if contenedor.tamaño >= proceso.memoria and contenedor.proceso is None:
+                    contenedor.proceso = proceso
+                    contenedor.tamaño_ocupado = proceso.memoria
+                    contenedor.tamaño_restante = contenedor.tamaño - proceso.memoria
+                    self.actualizar_tabla_contenedores()
+                    return
+    
+            nuevo_contenedor = Contenedor(len(self.contenedorDinamico) + 1, proceso.memoria)
+            nuevo_contenedor.proceso = proceso
+            nuevo_contenedor.tamaño_ocupado = proceso.memoria
+            nuevo_contenedor.tamaño_restante = nuevo_contenedor.tamaño - proceso.memoria
+            self.contenedorDinamico.append(nuevo_contenedor)
+            self.actualizar_tabla_contenedores()
+
+    def liberar_contenedor(self, proceso):
+        for contenedor in self.contenedorDinamico:
+            if contenedor.proceso == proceso:
+                contenedor.proceso = None
+                contenedor.tamaño_ocupado = 0
+                contenedor.tamaño_restante = contenedor.tamaño
+                self.actualizar_tabla_contenedores()
+                return
+
+    def actualizar_tabla(self):
+        self.tree.tag_configure("Nuevo", foreground="dimgray")
+        self.tree.tag_configure("Listo", foreground="darkred")
+        self.tree.tag_configure("Ejecución", foreground="darkgreen")
+        self.tree.tag_configure("Espera", foreground="darkblue")    
+        self.tree.tag_configure("Terminado", foreground="darkmagenta")
+
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        for proceso in self.procesos:
+            self.tree.insert(
+                "", "end", values=(proceso.pid, proceso.estado, proceso.rafaga, proceso.memoria),
+                tags=(proceso.estado,) 
+            )
+#***********************************************Funciones de ejecucion************************************************************
+   
+    def inicializar_procesos(self):
+        self.procesos = [Proceso(i, random.randint(5, 10), random.randint(10, 50)) for i in range(3)]
     
     def ejecutar_proceso(self):
-        """Inicia los procesos en 'Nuevo' y luego los pasa a 'Listo' tras 0.5s"""
         for proceso in self.procesos:
             proceso.estado = "Nuevo"
         self.dibujar_diagrama(self.generar_array_procesos())
         self.actualizar_tabla()
-        self.root.after(500, self.pasar_a_listo)
+        temporizador = self.root.after(500, self.pasar_a_listo)
+        self.temporizadores.append(temporizador)  # Guardar el temporizador
 
     def pasar_a_listo(self):
-        """Pasa todos los procesos de 'Nuevo' a 'Listo' después de 0.5s"""
         for proceso in self.procesos:
-            proceso.estado = "Listo"
-        self.dibujar_diagrama(self.generar_array_procesos())
+            if proceso.estado == "Nuevo":
+                proceso.estado = "Listo"
+                self.manejar_contenedores_dinamicos(proceso)
         self.actualizar_tabla()
-        self.root.after(500, self.ejecutar_revisiones)
+        temporizador = self.root.after(500, self.ejecutar_revisiones)
+        self.temporizadores.append(temporizador)  # Guardar el temporizador
 
     def ejecutar_revisiones(self):
-        """Cada segundo revisa la interrupción y gestiona los procesos"""
-        
-# Si no hay proceso en ejecución, tomar el primer "Listo" y ejecutarlo
+        # Si no hay proceso en ejecución, tomar el primer "Listo"
         proceso_ejecucion = next((p for p in self.procesos if p.estado == "Ejecución"), None)
         if not proceso_ejecucion:
             proceso_listo = next((p for p in self.procesos if p.estado == "Listo"), None)
@@ -205,106 +277,100 @@ class SimuladorProcesos:
             self.procesos.remove(proceso_espera)
             self.procesos.append(proceso_espera) 
 
+        # Si hay un proceso en "Nuevo", pasarlo a "Listo"
+        proceso_nuevo = next((p for p in self.procesos if p.estado == "Nuevo"), None)   
+        if proceso_nuevo:
+            proceso_nuevo.estado = "Listo"
+
+        # Si hay una interrupción, manejarla"
         if self.interrupcion:
             self.manejar_interrupcion()
         
         self.gestionar_procesos()
         self.dibujar_diagrama(self.generar_array_procesos())
         self.actualizar_tabla()
-        self.root.after(1000, self.ejecutar_revisiones)   
-    
+        temporizador = self.root.after(1000, self.ejecutar_revisiones)
+        self.temporizadores.append(temporizador)  # Guardar el temporizador
 
     def manejar_interrupcion(self):
-        """Si hay interrupción, mueve 'Ejecución' a 'Espera' y toma un nuevo 'Listo'"""
-        
+
         proceso_ejecucion = next((p for p in self.procesos if p.estado == "Ejecución"), None)
-        
         if proceso_ejecucion:
             proceso_ejecucion.estado = "Espera"
             
             proceso_listo = next((p for p in self.procesos if p.estado == "Listo"), None)
             if proceso_listo:
                 proceso_listo.estado = "Ejecución"
-            self.interrupcion = False  # Resetear la interrupción
+            self.interrupcion = False
             self.dibujar_diagrama(self.generar_array_procesos())
             self.actualizar_tabla()
-        
 
     def gestionar_procesos(self):
-        """Resta 1 a la ráfaga del proceso en ejecución y cambia de estado si es necesario"""
-        
+        #Resta 1 a la rafaga del proceso en ejecución
         proceso_ejecucion = next((p for p in self.procesos if p.estado == "Ejecución"), None)
-        
         if proceso_ejecucion:
             proceso_ejecucion.rafaga -= 1
             self.actualizar_tabla()
             if proceso_ejecucion.rafaga <= 0:
                 proceso_ejecucion.estado = "Terminado"
+                self.liberar_contenedor(proceso_ejecucion)
                 nuevo_proceso = next((p for p in self.procesos if p.estado == "Listo"), None)
                 if nuevo_proceso:
                     nuevo_proceso.estado = "Ejecución"
 
-    def reordenar_procesos(self):
-        """Mueve los procesos en 'Espera' a 'Listo' y los pone al final de la lista"""
-        procesos_espera = [p for p in self.procesos if p.estado == "Espera"]
-        self.procesos = [p for p in self.procesos if p.estado != "Espera"] + procesos_espera
-        for p in procesos_espera:
-            p.estado = "Listo"
-
-    def toggle_interrupcion(self):
-        """Activa o desactiva la interrupción"""
-        self.interrupcion = not self.interrupcion
-                                                                
-    def generar_array_procesos(self):
-        # Inicializar un diccionario para agrupar procesos por estado
-        estados_procesos = {
-            "Nuevo": [],
-            "Listo": [],
-            "Ejecución": [],
-            "Espera": [],
-            "Terminado": []
-        }
-
-        # Recorrer los procesos y agruparlos por estado
-        for proceso in self.procesos:
-            estados_procesos[proceso.estado].append(f"P{proceso.pid}")
-
-        # Crear el array de strings con saltos de línea cada 3 procesos
-        array_resultado = []
-        for estado in ["Nuevo", "Listo", "Ejecución", "Espera", "Terminado"]:
-            if estados_procesos[estado]:
-                # Concatenar los procesos con salto de línea cada 3
-                procesos_estado = estados_procesos[estado]
-                string_estado = "\n".join(
-                    [", ".join(procesos_estado[i:i+3]) for i in range(0, len(procesos_estado), 3)]
-                )
-                array_resultado.append(string_estado)
-            else:
-                # Si no hay procesos en este estado, agregar un espacio vacío
-                array_resultado.append(" ")
-
-        return array_resultado
-
-    def interrumpir_proceso(self):
-        self.interrupcion = True  # Activar interrupción
-
+#*********************************************Funciones de los botones************************************************************
     def iniciar_simulacion(self):
-        self.ejecutar_proceso()
+        self.simulacion_en_curso = True
+        self.ejecutar_proceso()  
 
+    def reiniciar_simulacion(self):
+        # Cancelar todos los temporizadores activos
+        for temporizador in self.temporizadores:
+            self.root.after_cancel(temporizador)
+        self.temporizadores.clear()  # Vaciar la lista de temporizadores
+    
+        # Reiniciar las listas y variables
+        self.procesos = []
+        self.contenedorDinamico = []
+        self.simulacion_en_curso = False
+        self.interrupcion = False
+    
+        # Inicializar procesos y actualizar la interfaz
+        self.inicializar_procesos()
+        self.actualizar_tabla()
+        self.actualizar_tabla_contenedores()
+        self.dibujar_diagrama(self.generar_array_procesos())
+    
+    def agregar_proceso(self):
+        nuevo_proceso = Proceso(len(self.procesos), random.randint(5, 10), random.randint(10, 50))
+        self.procesos.append(nuevo_proceso)
+        nuevo_proceso.estado = "Nuevo"
+        self.actualizar_tabla()
+    
+        # Si la simulación está en ejecución, mover el proceso a "Listo" después de un breve retraso
+        if self.simulacion_en_curso:
+            self.root.after(500, lambda: self.mover_a_listo(nuevo_proceso))
+
+    def mover_a_listo(self, proceso):
+        proceso.estado = "Listo"
+        self.manejar_contenedores_dinamicos(proceso)
+        self.actualizar_tabla()
+    
+    def interrumpir_proceso(self):
+        self.interrupcion = True 
+
+
+#****************************************************Inicio de la aplicación************************************************************************
 if __name__ == "__main__":
     root = tk.Tk()
-
-    # Obtener las dimensiones de la pantalla
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
-
-    # Calcular el tamaño mínimo de la ventana (40% del ancho y 80% del alto)
     min_width = int(screen_width * 0.4)
     min_height = int(screen_height * 0.8)
-
+    
     # Establecer el tamaño mínimo de la ventana
-    root.geometry(f"{min_width}x{min_height}")  # Establecer tamaño inicial
-    root.minsize(min_width, min_height)        # Establecer tamaño mínimo
+    root.geometry(f"{min_width}x{min_height}")
+    root.minsize(min_width, min_height) 
 
     # Crear la aplicación
     app = SimuladorProcesos(root)
