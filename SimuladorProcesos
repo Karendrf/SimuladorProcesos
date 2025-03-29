@@ -80,6 +80,13 @@ class SimuladorProcesos:
         self.canvas = FigureCanvasTkAgg(self.fig, master=root)
         self.canvas.get_tk_widget().place(relx=0.05, rely=0.33, relwidth=0.9, relheight=0.35)  # Gráfico al 80% de ancho
         
+         # Etiqueta de título talas memoria y lógica
+        self.titulo_memoria = tk.Label(root, text="Tabla de asignacion de memoria", font=("Arial", 10, "bold"))
+        self.titulo_memoria.place(relx=0.05, rely=0.7, relwidth=0.55, relheight=0.05)
+
+        self.titulo_logica = tk.Label(root, text="Tabla de direcciones", font=("Arial", 10, "bold"))
+        self.titulo_logica.place(relx=0.61, rely=0.7, relwidth=0.35, relheight=0.05)
+
         # Crear la tabla de contenedores
         self.tree_contenedores = ttk.Treeview(root, columns=("N°", "Tamaño", "Proceso", "Ocupado", "Restante"), show='headings')
         for col in ("N°", "Tamaño", "Proceso", "Ocupado", "Restante"):
@@ -94,7 +101,7 @@ class SimuladorProcesos:
         self.tree_contenedores.column("Proceso", width=column_width, anchor="center")
         self.tree_contenedores.column("Ocupado", width=column_width, anchor="center")
         self.tree_contenedores.column("Restante", width=column_width, anchor="center")
-        self.tree_contenedores.place(relx=0.05, rely=0.7, relwidth=0.55, relheight=0.25)
+        self.tree_contenedores.place(relx=0.05, rely=0.75, relwidth=0.55, relheight=0.23)
 
         # Crear la tabla lógica
         self.tree_logica = ttk.Treeview(root, columns=("Proceso", "Contenedores"), show='headings')
@@ -102,11 +109,11 @@ class SimuladorProcesos:
         self.tree_logica.heading("Contenedores", text="Contenedores")
         
         # Ajustar el ancho de las columnas dinámicamente
-        self.tree_logica.place(relx=0.61, rely=0.7, relwidth=0.35, relheight=0.25)
         self.root.update_idletasks()  # Asegurarse de que la tabla tenga el tamaño actualizado
         table_width = self.tree_logica.winfo_width()
         self.tree_logica.column("Proceso", width=int(table_width * 0.3), anchor="center")
         self.tree_logica.column("Contenedores", width=int(table_width * 0.7), anchor="center")
+        self.tree_logica.place(relx=0.61, rely=0.75, relwidth=0.35, relheight=0.23)
 
         # Inicializar procesos y tabla
         self.procesos = []
@@ -268,21 +275,40 @@ class SimuladorProcesos:
             self.actualizar_tabla_contenedores()
     
         elif self.combobox.get() == "Segmentacion":
-            # Lógica para "Segmentación"
+            # Verificar si el proceso ya está completamente asignado
+            segmentos_asignados = sum(
+                contenedor.tamaño_ocupado for contenedor in self.contenedorDinamico if contenedor.proceso == proceso
+            )
+            if segmentos_asignados >= proceso.memoria:
+                return  # El proceso ya está completamente asignado
+    
+            # Generar un número aleatorio entre 3 y 6 para determinar el número de segmentos
             num_segmentos = random.randint(3, 6)
             segmentos = []
     
+            # Dividir la memoria del proceso en segmentos balanceados
             memoria_restante = proceso.memoria
             for i in range(num_segmentos):
                 if i == num_segmentos - 1:
+                    # Último segmento toma toda la memoria restante
                     segmentos.append(memoria_restante)
                 else:
+                    # Generar un tamaño para el segmento que sea razonable
                     max_segmento = memoria_restante // (num_segmentos - i) + random.randint(-2, 2)
-                    max_segmento = max(1, min(max_segmento, memoria_restante))
+                    max_segmento = max(1, min(max_segmento, memoria_restante))  # Evitar valores negativos o mayores a la memoria restante
                     segmentos.append(max_segmento)
                     memoria_restante -= max_segmento
     
+            # Asignar los segmentos a contenedores
             for segmento in segmentos:
+                # Verificar si el segmento ya está asignado
+                segmentos_asignados = sum(
+                    contenedor.tamaño_ocupado for contenedor in self.contenedorDinamico if contenedor.proceso == proceso
+                )
+                if segmentos_asignados >= proceso.memoria:
+                    break  # Todos los segmentos del proceso ya están asignados
+    
+                # Buscar un contenedor disponible que pueda acomodar el segmento
                 contenedor_asignado = None
                 for contenedor in self.contenedorDinamico:
                     if contenedor.proceso is None and contenedor.tamaño >= segmento:
@@ -292,6 +318,7 @@ class SimuladorProcesos:
                         contenedor_asignado = contenedor
                         break
     
+                # Si no hay un contenedor disponible, crear uno nuevo con el tamaño exacto necesario
                 if not contenedor_asignado:
                     nuevo_contenedor = Contenedor(len(self.contenedorDinamico) + 1, segmento)
                     nuevo_contenedor.proceso = proceso
@@ -299,6 +326,7 @@ class SimuladorProcesos:
                     nuevo_contenedor.tamaño_restante = nuevo_contenedor.tamaño - segmento
                     self.contenedorDinamico.append(nuevo_contenedor)
     
+            # Actualizar las tablas
             self.actualizar_tabla_contenedores()
     
         elif self.combobox.get() == "Continuia Fija":
@@ -402,6 +430,9 @@ class SimuladorProcesos:
         self.temporizadores.append(temporizador)  # Guardar el temporizador
 
     def ejecutar_revisiones(self):
+        if self.simulacion_pausada:
+            return  # No hacer nada si la simulación está pausada
+    
         # Si no hay proceso en ejecución, tomar el primer "Listo"
         proceso_ejecucion = next((p for p in self.procesos if p.estado == "Ejecución"), None)
         if not proceso_ejecucion:
@@ -413,8 +444,7 @@ class SimuladorProcesos:
         proceso_espera = next((p for p in self.procesos if p.estado == "Espera"), None)
         if proceso_espera:
             if self.combobox.get() == "Continuia Fija" and proceso_espera.memoria > 40:
-                # Los procesos con memoria > 40 permanecen en "Espera"
-                pass
+                pass  # Los procesos con memoria > 40 permanecen en "Espera"
             else:
                 proceso_espera.estado = "Listo"
                 self.procesos.remove(proceso_espera)
@@ -424,8 +454,7 @@ class SimuladorProcesos:
         proceso_nuevo = next((p for p in self.procesos if p.estado == "Nuevo"), None)
         if proceso_nuevo:
             if self.combobox.get() == "Continuia Fija" and proceso_nuevo.memoria > 40:
-                # Los procesos con memoria > 40 permanecen en "Nuevo"
-                pass
+                pass  # Los procesos con memoria > 40 permanecen en "Nuevo"
             else:
                 proceso_nuevo.estado = "Listo"
                 self.manejar_contenedores_dinamicos(proceso_nuevo)
@@ -438,8 +467,11 @@ class SimuladorProcesos:
         self.gestionar_procesos()
         self.dibujar_diagrama(self.generar_array_procesos())
         self.actualizar_tabla_procesos()
-        temporizador = self.root.after(1000, self.ejecutar_revisiones)
-        self.temporizadores.append(temporizador)
+    
+        # Programar la siguiente revisión si no está pausada
+        if not self.simulacion_pausada:
+            temporizador = self.root.after(1000, self.ejecutar_revisiones)
+            self.temporizadores.append(temporizador)
 
     def manejar_interrupcion(self):
 
@@ -469,8 +501,27 @@ class SimuladorProcesos:
 
 #*********************************************Funciones de los botones************************************************************
     def iniciar_simulacion(self):
-        self.simulacion_en_curso = True
-        self.ejecutar_proceso()
+        if not self.simulacion_en_curso:
+            # Iniciar la simulación
+            self.simulacion_en_curso = True
+            self.simulacion_pausada = False
+            self.btn_iniciar.config(text="Pausar Simulación")  # Cambiar el texto del botón
+            self.combobox.config(state="disabled")  # Deshabilitar el Combobox
+            self.ejecutar_proceso()
+        elif not self.simulacion_pausada:
+            # Pausar la simulación
+            self.simulacion_pausada = True
+            self.btn_iniciar.config(text="Reanudar Simulación")  # Cambiar el texto del botón
+            # Cancelar todos los temporizadores activos
+            for temporizador in self.temporizadores:
+                self.root.after_cancel(temporizador)
+            self.temporizadores.clear()
+        else:
+            # Reanudar la simulación
+            self.simulacion_pausada = False
+            self.btn_iniciar.config(text="Pausar Simulación")  # Cambiar el texto del botón
+            # Reanudar la ejecución
+            self.ejecutar_revisiones()
 
     def reiniciar_simulacion(self):
         # Cancelar todos los temporizadores activos
@@ -482,25 +533,32 @@ class SimuladorProcesos:
         self.procesos = []
         self.contenedorDinamico = []
         self.simulacion_en_curso = False
+        self.simulacion_pausada = False  # Asegurarse de que no esté pausada
         self.interrupcion = False
+    
+        # Restablecer el texto del botón a "Iniciar Simulación"
+        self.btn_iniciar.config(text="Iniciar Simulación")
+        self.combobox.config(state="readonly")  # Habilitar el Combobox
     
         # Inicializar procesos y actualizar la interfaz
         self.inicializar_procesos()
         self.actualizar_tabla_procesos()
         self.actualizar_tabla_contenedores()
-        self.dibujar_diagrama(self.generar_array_procesos())
-    
+        self.dibujar_diagrama(self.generar_array_procesos())    
     def agregar_proceso(self):
         nuevo_proceso = Proceso(len(self.procesos), random.randint(5, 10), random.randint(10, 50))
         self.procesos.append(nuevo_proceso)
         nuevo_proceso.estado = "Nuevo"
         self.actualizar_tabla_procesos()
     
-        # Si la simulación está en ejecución, intentar mover el proceso a "Listo" después de un breve retraso
-        if self.simulacion_en_curso:
+        # Si la simulación está en ejecución y no está pausada, mover el proceso a "Listo"
+        if self.simulacion_en_curso and not self.simulacion_pausada:
             self.root.after(500, lambda: self.mover_a_listo(nuevo_proceso))
 
     def mover_a_listo(self, proceso):
+        if self.simulacion_pausada:
+            return  # No hacer nada si la simulación está pausada
+    
         if self.combobox.get() == "Continuia Fija" and proceso.memoria > 40:
             # Los procesos con memoria mayor a 40 permanecen en "Nuevo"
             return
