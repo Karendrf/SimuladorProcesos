@@ -3,6 +3,19 @@ from View.View import SimuladorVista
 
 
 class SimuladorControlador:
+
+    def cleanup(self):
+        """
+    Realiza limpieza de recursos antes de cerrar la aplicación.
+    
+    Acciones:
+        - Cancela todos los temporizadores pendientes
+        - Limpia la lista de temporizadores
+    """
+        for temporizador in self.temporizadores:
+            self.vista.root.after_cancel(temporizador)
+        self.temporizadores.clear()
+
     """
     Controlador principal que conecta el modelo y la vista.
     """

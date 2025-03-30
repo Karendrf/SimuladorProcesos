@@ -3,6 +3,7 @@ import sys
 from Controller.Controller import SimuladorControlador
 
 if __name__ == "__main__":
+
     """
     Punto de entrada principal del programa. Configura la ventana principal,
     inicializa el controlador y ejecuta el bucle principal de la aplicación.
@@ -24,6 +25,9 @@ if __name__ == "__main__":
     app = SimuladorControlador(root)
 
     # Configurar el evento de cierre de la ventana
+    # Inicializar el controlador
+    app = SimuladorControlador(root)
+
     def cerrar_ventana():
         """
         Cierra la ventana principal y finaliza el programa.
@@ -33,11 +37,27 @@ if __name__ == "__main__":
 
         Retorno:
         No retorna nada.
-        """
-        root.destroy()  # Destruir la ventana
-        sys.exit()  # Finalizar el programa
+        """  
+        try:
+            # Limpiar recursos del controlador
+            if hasattr(app, 'cleanup'):
+                app.cleanup()
+            
+            # Destruir la ventana
+            root.quit()
+            root.destroy()
+        except Exception as e:
+            print(f"Error al cerrar: {e}")
+            sys.exit(1)
 
     root.protocol("WM_DELETE_WINDOW", cerrar_ventana)
 
-    # Ejecutar el bucle principal de la aplicación
-    root.mainloop()
+    try:
+        # Ejecutar el bucle principal de la aplicación
+        root.mainloop()
+        #Excepción incorporada que ocurre cuando el usuario interrumpe la ejecución de un programa utilizando
+        #una acción de teclado, típicamente presionando Ctrl+C
+    except KeyboardInterrupt:
+        cerrar_ventana()
+
+    
