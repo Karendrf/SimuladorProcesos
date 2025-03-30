@@ -1,6 +1,18 @@
 import random
 
 class Proceso:
+    """
+    Clase que representa el objeto Proceso en el simulador.
+    Contiene atributos para el identificador del proceso, tiempo de ráfaga,
+
+    Argumentos:
+    pid (int): Identificador único del proceso.
+    rafaga (int): Tiempo de ráfaga del proceso.
+    memoria (int): Cantidad de memoria requerida por el proceso.
+
+    Retorno:
+    No retorna nada.
+    """
     def __init__(self, pid, rafaga, memoria):
         self.pid = pid
         self.rafaga = rafaga
@@ -10,6 +22,16 @@ class Proceso:
 
 
 class Contenedor:
+    """
+    Representa un contenedor de memoria en el sistema.
+
+    Argumentos:
+    numero (int): Identificador único del contenedor.
+    tamaño (int): Tamaño total del contenedor.
+
+    Retorno:
+    No retorna nada.
+    """
     def __init__(self, numero, tamaño):
         self.numero = numero
         self.tamaño = tamaño
@@ -19,21 +41,61 @@ class Contenedor:
 
 
 class SimuladorModelo:
+    """
+    Modelo principal del simulador que gestiona procesos y contenedores.
+    """
+
     def __init__(self):
+        """
+        Inicializa el modelo con listas vacías de procesos y contenedores.
+
+        Argumentos:
+        No recibe argumentos.
+
+        Retorno:
+        No retorna nada.
+        """
         self.procesos = []
         self.contenedorDinamico = []
 
     def inicializar_procesos(self):
+        """
+        Inicializa una lista de procesos con valores aleatorios.
+
+        Argumentos:
+        No recibe argumentos.
+
+        Retorno:
+        No retorna nada.
+        """
         #Inicializa una lista de procesos con valores aleatorios.
         self.procesos = [Proceso(i, random.randint(5, 10), random.randint(10, 50)) for i in range(3)]
 
     def agregar_proceso(self):
+        """
+        Crea un nuevo proceso con valores aleatorios y lo agrega a la lista de procesos.
+
+        Argumentos:
+        No recibe argumentos.
+
+        Retorno:
+        Proceso: El nuevo proceso creado.
+        """     
         #Crea un nuevo proceso con valores aleatorios y lo agrega a la lista de procesos.
         nuevo_proceso = Proceso(len(self.procesos), random.randint(5, 10), random.randint(10, 50))
         self.procesos.append(nuevo_proceso)
         return nuevo_proceso
 
     def liberar_contenedor(self, proceso):
+        """
+        Libera todos los contenedores asociados a un proceso.
+
+        Argumentos:
+        proceso (Proceso): El proceso cuyos contenedores serán liberados.
+
+        Retorno:
+        No retorna nada.
+        """
         #Libera todos los contenedores asociados a un proceso.
         for contenedor in self.contenedorDinamico:
             if contenedor.proceso == proceso:
@@ -42,6 +104,16 @@ class SimuladorModelo:
                 contenedor.tamaño_restante = contenedor.tamaño
 
     def manejar_contenedores_dinamicos(self, proceso, algoritmo):
+        """
+        Asigna contenedores a un proceso según el algoritmo seleccionado.
+
+        Argumentos:
+        proceso (Proceso): El proceso al que se asignarán los contenedores.
+        algoritmo (str): El algoritmo de asignación a utilizar.
+
+        Retorno:
+        No retorna nada.
+        """
         #Asigna contenedores a un proceso según el algoritmo seleccionado.
         if algoritmo == "Continua Dinamica":
             self._manejar_continua_dinamica(proceso)
@@ -53,6 +125,15 @@ class SimuladorModelo:
             self._manejar_continua_fija(proceso)
 
     def _manejar_continua_dinamica(self, proceso):
+        """
+        Asigna contenedores dinámicos a un proceso.
+
+        Argumentos:
+        proceso (Proceso): El proceso al que se asignarán los contenedores.
+
+        Retorno:
+        No retorna nada.
+        """
         for contenedor in self.contenedorDinamico:
             if contenedor.proceso == proceso:
                 return
@@ -74,6 +155,15 @@ class SimuladorModelo:
             self.contenedorDinamico.append(nuevo_contenedor)
 
     def _manejar_paginacion(self, proceso):
+        """
+        Asigna contenedores al proceso utilizando el algoritmo de paginación.
+
+        Argumentos:
+        proceso (Proceso): El proceso al que se asignarán los contenedores.
+
+        Retorno:
+        No retorna nada.
+        """
         # Dividir la memoria del proceso en páginas de tamaño 10
         paginas = [10] * (proceso.memoria // 10)
         if proceso.memoria % 10 != 0:
@@ -99,6 +189,15 @@ class SimuladorModelo:
                 self.contenedorDinamico.append(nuevo_contenedor)
 
     def _manejar_segmentacion(self, proceso):
+        """
+        Asigna contenedores al proceso utilizando el algoritmo de segmentación.
+
+        Argumentos:
+        proceso (Proceso): El proceso al que se asignarán los contenedores.
+
+        Retorno:
+        No retorna nada.
+        """
         segmentos_asignados = sum(
             contenedor.tamaño_ocupado for contenedor in self.contenedorDinamico if contenedor.proceso == proceso
         )
@@ -136,6 +235,15 @@ class SimuladorModelo:
                 self.contenedorDinamico.append(nuevo_contenedor)
 
     def _manejar_continua_fija(self, proceso):
+        """
+        Asigna contenedores al proceso utilizando el algoritmo de memoria continua fija.
+
+        Argumentos:
+        proceso (Proceso): El proceso al que se asignarán los contenedores.
+
+        Retorno:
+        No retorna nada.
+        """
         for contenedor in self.contenedorDinamico:
             if contenedor.proceso == proceso:
                 return

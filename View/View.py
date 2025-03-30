@@ -7,6 +7,15 @@ import networkx as nx
 
 class SimuladorVista:
     def __init__(self, root):
+        """
+        Crea la ventana principal, sus componentes y los ubica sobre la hoja (root).
+
+        Argumentos:
+        root (tk.Tk): La ventana principal de la aplicación.
+
+        Retorno:
+        No retorna nada.
+        """
         self.root = root
         self.root.title("Simulador de Procesos")
         self.temporizadores = []
@@ -97,8 +106,16 @@ class SimuladorVista:
         self.grafo = nx.DiGraph()
         self.configurar_diagrama()
 
-    def configurar_diagrama(self):
-        """Configura el grafo para el diagrama de estados."""
+    def configurar_diagrama(self):  
+        """
+        Configura el grafo para el diagrama de estados.
+
+        Argumentos:
+        no recibe argumentos
+
+        Retorno:
+        No retorna nada.
+        """
         self.grafo.add_edges_from([
             ("Nuevo", "Listo"), ("Listo", "Ejecución"), ("Ejecución", "Espera"),
             ("Ejecución", "Terminado"), ("Espera", "Listo")
@@ -109,7 +126,15 @@ class SimuladorVista:
         }
 
     def dibujar_diagrama(self, textos_secundarios):
-        """Dibuja el diagrama de estados del sistema."""
+        """
+        Dibuja el diagrama de estados del sistema.
+
+        Argumentos:
+        textos_secundarios (list): Lista de textos secundarios (Procesos en cada nodo).
+
+        Retorno:
+        No retorna nada.
+        """
         self.ax.clear()
         colores_nodos = {
             "Nuevo": "lightgray",
@@ -149,6 +174,15 @@ class SimuladorVista:
         self.canvas.draw()
 
     def actualizar_tabla_procesos(self, procesos):
+        """
+        Actualiza la tabla de procesos con los datos actuales.
+
+        Argumentos:
+        procesos (list): Lista de procesos a mostrar en la tabla.
+
+        Retorno:
+        No retorna nada.
+        """
         #Actualiza la tabla de procesos con los datos actuales.
         self.tree.tag_configure("Nuevo", foreground="dimgray")
         self.tree.tag_configure("Listo", foreground="darkred")
@@ -167,6 +201,15 @@ class SimuladorVista:
             )
 
     def actualizar_tabla_contenedores(self, contenedores):
+        """
+        Actualiza la tabla de contenedores con los datos actuales.
+
+        Argumentos:
+        contenedores (list): Lista de contenedores a mostrar en la tabla.
+
+        Retorno:
+        No retorna nada.
+        """
         #Actualiza la tabla de contenedores con los datos actuales
         for row in self.tree_contenedores.get_children():
             self.tree_contenedores.delete(row)
@@ -179,6 +222,15 @@ class SimuladorVista:
             )
 
     def actualizar_tabla_logica(self, contenedores):
+        """
+        Actualiza la tabla de direcciones con los datos actuales.
+
+        Argumentos:
+        contenedores (list): Lista de contenedores a mostrar en la tabla lógica.
+
+        Retorno:
+        No retorna nada.
+        """
         #Actualiza la tabla de direcciones con los datos actuales
         for row in self.tree_logica.get_children():
             self.tree_logica.delete(row)
