@@ -30,13 +30,13 @@ if __name__ == "__main__":
 
     def cerrar_ventana():
         """
-        Cierra la ventana principal y finaliza el programa.
+        Cierra la ventana principal y finaliza el programa
 
         Argumentos:
-        No recibe argumentos.
+        No recibe argumentos
 
         Retorno:
-        No retorna nada.
+        No retorna nada
         """  
         try:
             # Limpiar recursos del controlador
