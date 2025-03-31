@@ -53,10 +53,10 @@ if __name__ == "__main__":
     root.protocol("WM_DELETE_WINDOW", cerrar_ventana)
 
     try:
-        # Ejecutar el bucle principal de la aplicación
+        # Ejecutar el bucle principal de la aplicación.
         root.mainloop()
         #Excepción incorporada que ocurre cuando el usuario interrumpe la ejecución de un programa utilizando
-        #una acción de teclado, típicamente presionando Ctrl+C
+        #una acción de teclado, típicamente presionando Ctrl+C.
     except KeyboardInterrupt:
         cerrar_ventana()
 
