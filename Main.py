@@ -3,7 +3,7 @@ import sys
 from Controller.Controller import SimuladorControlador
 
 if __name__ == "__main__":
-
+ 
     """
     Punto de entrada principal del programa. Configura la ventana principal,
     inicializa el controlador y ejecuta el bucle principal de la aplicación.

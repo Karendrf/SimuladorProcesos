@@ -3,12 +3,13 @@ import random
 class Proceso:
     """
     Clase que representa el objeto Proceso en el simulador.
-    Contiene atributos para el identificador del proceso, tiempo de ráfaga,
+    Contiene atributos para el identificador del proceso, tiempo de ráfaga, memoria
 
     Argumentos:
     pid (int): Identificador único del proceso.
     rafaga (int): Tiempo de ráfaga del proceso.
     memoria (int): Cantidad de memoria requerida por el proceso.
+    
 
     Retorno:
     No retorna nada.
@@ -26,7 +27,7 @@ class Contenedor:
     Representa un contenedor de memoria en el sistema.
 
     Argumentos:
-    numero (int): Identificador único del contenedor.
+    numero (int): Identificador del contenedor.
     tamaño (int): Tamaño total del contenedor.
 
     Retorno:
@@ -58,6 +59,7 @@ class SimuladorModelo:
         self.procesos = []
         self.contenedorDinamico = []
 
+
     def inicializar_procesos(self):
         """
         Inicializa una lista de procesos con valores aleatorios.
@@ -70,6 +72,7 @@ class SimuladorModelo:
         """
         #Inicializa una lista de procesos con valores aleatorios.
         self.procesos = [Proceso(i, random.randint(5, 10), random.randint(10, 50)) for i in range(3)]
+
 
     def agregar_proceso(self):
         """
@@ -85,6 +88,7 @@ class SimuladorModelo:
         nuevo_proceso = Proceso(len(self.procesos), random.randint(5, 10), random.randint(10, 50))
         self.procesos.append(nuevo_proceso)
         return nuevo_proceso
+
 
     def liberar_contenedor(self, proceso):
         """
@@ -102,6 +106,7 @@ class SimuladorModelo:
                 contenedor.proceso = None
                 contenedor.tamaño_ocupado = 0
                 contenedor.tamaño_restante = contenedor.tamaño
+
 
     def manejar_contenedores_dinamicos(self, proceso, algoritmo):
         """
@@ -123,6 +128,7 @@ class SimuladorModelo:
             self._manejar_segmentacion(proceso)
         elif algoritmo == "Continuia Fija":
             self._manejar_continua_fija(proceso)
+
 
     def _manejar_continua_dinamica(self, proceso):
         """
@@ -153,6 +159,7 @@ class SimuladorModelo:
             nuevo_contenedor.tamaño_ocupado = proceso.memoria
             nuevo_contenedor.tamaño_restante = nuevo_contenedor.tamaño - proceso.memoria
             self.contenedorDinamico.append(nuevo_contenedor)
+
 
     def _manejar_paginacion(self, proceso):
         """
@@ -187,6 +194,7 @@ class SimuladorModelo:
                 nuevo_contenedor.tamaño_ocupado = pagina
                 nuevo_contenedor.tamaño_restante = nuevo_contenedor.tamaño - pagina
                 self.contenedorDinamico.append(nuevo_contenedor)
+
 
     def _manejar_segmentacion(self, proceso):
         """
@@ -233,6 +241,7 @@ class SimuladorModelo:
                 nuevo_contenedor.tamaño_ocupado = segmento
                 nuevo_contenedor.tamaño_restante = nuevo_contenedor.tamaño - segmento
                 self.contenedorDinamico.append(nuevo_contenedor)
+
 
     def _manejar_continua_fija(self, proceso):
         """
